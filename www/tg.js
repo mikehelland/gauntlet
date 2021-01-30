@@ -21,7 +21,7 @@ tg.loadSong = function (songData, source, callback) {
         tg.song = songData;
     }
     else {
-        tg.song = new OMGSong(null, songData);
+        tg.song = new OMGSong(songData);
     }
     
     if (tg.player) {
@@ -2590,7 +2590,7 @@ tg.copySection = function (name) {
     if (name) newSectionData.name = name;
     var names = tg.song.sections.map(section => section.data.name);
     newSectionData.name = omg.util.getUniqueName(newSectionData.name, names);
-    var newSection = new OMGSection(null, newSectionData, tg.song);
+    var newSection = new OMGSection(newSectionData, tg.song);
     tg.player.loadSection(newSection);
     tg.player.loopSection = tg.song.sections.indexOf(newSection);
     tg.loadSection(newSection);

@@ -71,7 +71,7 @@ tg.loadSong = function (songData, source, callback) {
         tg.song = songData;
     }
     else {
-        tg.song = new OMGSong(null, songData);
+        tg.song = new OMGSong(songData);
     }
     
     if (tg.player) {
