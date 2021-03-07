@@ -10,24 +10,7 @@ module.exports = function (data, song, passOn) {
         }
     };
 
-    if (data.action === "partAdd") {
-        song.sections[0].parts.push(data.part);
-    }
-    else if (data.property === "beatParams") {
-        song.beatParams.bpm = data.value.bpm;
-        song.beatParams.shuffle = data.value.shuffle;
-        song.beatParams.subbeats = data.value.subbeats;
-        song.beatParams.beats = data.value.beats;
-        song.beatParams.measures = data.value.measures;
-    }
-    else if (data.property === "keyParams") {
-        song.keyParams.rootNote = data.value.rootNote;
-        song.keyParams.scale = data.value.scale;
-    }
-    else if (data.property === "chordProgression") {
-        song.sections[0].chordProgression = data.value;
-    }
-    else if (data.property === "audioParams" && data.partName) {
+    if (data.property === "audioParams" && data.partName) {
         let part = getPart(song, data.partName);
         if (!part) return;
         part.audioParams.mute = data.value.mute;
@@ -66,4 +49,25 @@ module.exports = function (data, song, passOn) {
             }
         }
     }
+    else if (data.action === "partAdd") {
+        song.parts[data.part.name] = data.part;
+    }
+    else if (data.action === "partSectionAdd") {
+        song.sections[data.section].parts[data.part.name] = data.part;
+    }    
+    else if (data.property === "beatParams") {
+        song.beatParams.bpm = data.value.bpm;
+        song.beatParams.shuffle = data.value.shuffle;
+        song.beatParams.subbeats = data.value.subbeats;
+        song.beatParams.beats = data.value.beats;
+        song.beatParams.measures = data.value.measures;
+    }
+    else if (data.property === "keyParams") {
+        song.keyParams.rootNote = data.value.rootNote;
+        song.keyParams.scale = data.value.scale;
+    }
+    else if (data.property === "chordProgression") {
+        song.sections[0].chordProgression = data.value;
+    }
+    
 }

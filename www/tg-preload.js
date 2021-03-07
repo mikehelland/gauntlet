@@ -59,7 +59,7 @@ tg.setupPartButton = function (omgpart) {
     muteButton.className = "part-mute-button";
     muteButton.innerHTML = "M";
     muteButton.onclick = function () {
-        tg.player.mutePart(omgpart, !omgpart.data.audioParams.mute)
+        tg.musicContext.mutePart(omgpart, !omgpart.data.audioParams.mute)
     }
     muteButton.refresh = function () {
         muteButton.style.backgroundColor = omgpart.data.audioParams.mute ?
@@ -93,7 +93,7 @@ tg.getSong = function (callback) {
                 tg.singlePanel = true;
             }
             else if (param.startsWith("remoteTo=")) {
-                tg.remoteTo = param.split("=")[1];
+                tg.remoteTo = decodeURIComponent(param.split("=")[1]);
                 blank = true
             }
             else if (param.startsWith("room=")) {
@@ -129,17 +129,26 @@ tg.getSong = function (callback) {
     }
 };
 
-tg.preloadSong = function (songData) {
-    tg.song = OMGSong.prototype.make(songData);
+tg.preloadSong = async function (songData) {
+
+    var o = await import("/apps/music/js/omusic.js")
+    tg.musicContext = new o.default()
+    tg.musicContext.loadFullSoundSets = true
+    var {song, player} = await tg.musicContext.load(songData)
+    tg.song = song
+    tg.player = player
+
+    //tg.song = OMGSong.prototype.make(songData);
     document.getElementById("tool-bar-song-button").innerHTML = tg.song.data.name || "(Untitled)";
     
-    var section = tg.song.sections[0];
+    var section = Object.values(tg.song.sections)[0];
     tg.currentSection = section;
     tg.partList.innerHTML = "";
-    for (var j = 0; j < section.parts.length; j++) {
-        tg.setupPartButton(section.parts[j]);
+    for (var part in song.parts) {
+        tg.setupPartButton(song.parts[part]);
     }
     tg.setSongControlsUI();
+
 };
 
 
@@ -194,9 +203,9 @@ tg.keyHelper = {keys: ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb
     }
 };
 
-tg.getSong(function (song) {
+tg.getSong(async function (song) {
     try {
-    tg.preloadSong(song);
+    await tg.preloadSong(song);
     }
     catch (e) {console.log(e)}
 
@@ -206,11 +215,6 @@ tg.getSong(function (song) {
     var scriptTag;
     let scripts = ["/js/omgservice.js",
         "/apps/music/js/omgservice_music.js",
-        "/apps/music/js/libs/tuna-min.js", 
-        "/apps/music/js/omusic_player.js", 
-        //todo music player should load tuna, fx, and viktor
-        "/apps/music/js/fx.js",
-        "/apps/music/js/libs/viktor/viktor.js",
         "tg.js",
     ]
     

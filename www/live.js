@@ -75,7 +75,7 @@ tg.omglive = {
 
         tg.omglive.socket = new OMGRealTime()
         
-        tg.omglive.socket.on("data", function (data) {
+        tg.omglive.socket.on("SONG", function (data) {
             tg.omglive.ondata(data);
         });
         tg.omglive.socket.on("chat", function (data) {
@@ -117,7 +117,9 @@ tg.omglive = {
         tg.omglive.sendDataTo = undefined
         
         tg.joinLiveRoom = roomName
-        roomName = location.pathname + "?room=" + roomName
+        if (!roomName.startsWith("/")) {
+            roomName = location.pathname + "?room=" + roomName
+        }
         tg.omglive.joinCallback = callback
         if (tg.omglive.socket) {
             tg.omglive.removeListeners();
@@ -299,7 +301,7 @@ tg.omglive.onLoadSongListener = function (source) {
 
     tg.omglive.setupListeners();
 
-    tg.omglive.emit("data", {
+    tg.omglive.emit("SONG", {
         action: "loadSong", 
         value: tg.song.getData()
     });
@@ -308,7 +310,7 @@ tg.omglive.onLoadSongListener = function (source) {
 tg.omglive.onFXChangeListener = function (action, part, fx, source) {
     if (source === "omglive") return;
 
-    tg.omglive.emit("data", {
+    tg.omglive.emit("SONG", {
         action: "fxChange",
         fxAction: action, 
         partName: part === tg.song ? undefined : part.data.name,
@@ -320,7 +322,7 @@ tg.omglive.onFXChangeListener = function (action, part, fx, source) {
 tg.omglive.onBeatChangeListener = function (beatParams, source) {
     if (source === "omglive") return;
 
-    tg.omglive.emit("data", {
+    tg.omglive.emit("SONG", {
         property: "beatParams", 
         value: beatParams
     });
@@ -329,7 +331,7 @@ tg.omglive.onBeatChangeListener = function (beatParams, source) {
 tg.omglive.onKeyChangeListener = function (keyParams, source) {
     if (source === "omglive") return;
 
-    tg.omglive.emit("data", {
+    tg.omglive.emit("SONG", {
         property: "keyParams", 
         value: keyParams
     });
@@ -338,7 +340,7 @@ tg.omglive.onKeyChangeListener = function (keyParams, source) {
 tg.omglive.onChordProgressionChangeListener = function (source) {
     if (source === "omglive") return;
 
-    tg.omglive.emit("data", {
+    tg.omglive.emit("SONG", {
         property: "chordProgression", 
         value: tg.currentSection.data.chordProgression
     });
@@ -347,7 +349,7 @@ tg.omglive.onChordProgressionChangeListener = function (source) {
 tg.omglive.onPartAudioParamsChangeListener = function (part, source) {
     if (source === "omglive") return;
 
-    tg.omglive.emit("data", {
+    tg.omglive.emit("SONG", {
         property: "audioParams", 
         partName: part.data.name,
         value: part.data.audioParams
@@ -357,7 +359,7 @@ tg.omglive.onPartAudioParamsChangeListener = function (part, source) {
 tg.omglive.onPartAddListener = function (part, source) {
     if (source === "omglive") return;
 
-    tg.omglive.emit("data", {
+    tg.omglive.emit("SONG", {
         action: "partAdd", 
         part: part.data,
     });
@@ -367,11 +369,12 @@ tg.omglive.onSequencerChangeListener = function (part, trackI, subbeat) {
     var data = {
         action: "sequencerChange", 
         partName: part.data.name,
+        sectionName: part.section.data.name,
         value: part.data.tracks[trackI].data[subbeat],
         trackI: trackI,
         subbeat: subbeat
     };
-    tg.omglive.emit("data", data);
+    tg.omglive.emit("SONG", data);
 };
 
 tg.omglive.onVerticalChangeListener = function (part, frets, autobeat) {
@@ -386,14 +389,14 @@ tg.omglive.onVerticalChangeListener = function (part, frets, autobeat) {
     }
     
     if (tg.omglive.calculateNotesLocally) {
-        tg.omglive.emit("data", {
+        tg.omglive.emit("SONG", {
             action: "verticalChangeNotes", 
             partName: part.data.name,
             value: part.data.notes
         });
     }
     else {
-        tg.omglive.emit("data", {
+        tg.omglive.emit("SONG", {
             action: "verticalChangeFrets", 
             partName: part.data.name,
             value: frets,
@@ -409,7 +412,7 @@ tg.omglive.onPlayListener = function (play) {
     var data = {
         action: play ? "play" : "stop"
     };
-    tg.omglive.emit("data", data);
+    tg.omglive.emit("SONG", data);
 };
 
 tg.omglive.onjoin = function (data) {
@@ -460,7 +463,7 @@ tg.omglive.ondata = function (data) {
         tg.addPart(data.part.soundSet, "omglive");
     }
     else if (data.action === "sequencerChange") {
-        let part = tg.currentSection.getPart(data.partName);
+        let part = tg.currentSection.parts[data.partName];
         part.data.tracks[data.trackI].data[data.subbeat] = data.value;
         if (part.drumMachine && !part.drumMachine.hidden) part.drumMachine.draw();
         if (tg.presentationMode) part.presentationUI.draw();
@@ -500,7 +503,7 @@ tg.omglive.onchat = function (data) {
 };
 
 tg.omglive.onVerticalChangeFrets = function (data) {
-    var part = tg.currentSection.getPart(data.partName);
+    var part = tg.currentSection.parts[data.partName];
     if (data.value.length > 0) {
         data.value.autobeat = data.autobeat;
         tg.player.playLiveNotes(data.value, part, 0);
@@ -617,7 +620,7 @@ tg.omglive.chat = function (text) {
 };
 
 tg.omglive.sendPlaySound = function (noteNumber, strength, part) {
-    tg.omglive.emit("data", {
+    tg.omglive.emit("SONG", {
         action: "playSound",
         partName: part.data.name,
         user: tg.omglive.username, 

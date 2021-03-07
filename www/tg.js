@@ -14,31 +14,34 @@ tg.detailFragment = document.getElementById("detail-fragment");
 tg.backButton = document.getElementById("back-button");
 tg.mainToolbar = document.getElementById("tool-bar");
 
-tg.loadSong = function (songData, source, callback) {
+tg.loadSong = async function (songData, source, callback) {
     
-    var className = songData.constructor.name;
-    if (className === "OMGSong") {
-        tg.song = songData;
+    var {song, player} = await tg.musicContext.load(songData)
+    tg.song = song
+    tg.player = player
+    var section = Object.values(tg.song.sections)[0] || tg.song.addSection() 
+
+    var showMeters = tg.peakMeters.show;
+    tg.peakMeters.toggle("Off");
+
+    tg.currentSection = section;
+    tg.partList.innerHTML = "";
+    for (var partName in  song.parts) {
+        tg.loadPart(song.parts[partName]);        
     }
-    else {
-        tg.song = new OMGSong(songData);
-    }
-    
-    if (tg.player) {
-        tg.player.prepareSong(tg.song, callback);
-    }
-    
-    tg.loadSection(tg.song.sections[0]);
+    //if (tg.player.loopSection)
+    tg.peakMeters.toggle(showMeters);
         
     document.getElementById("tool-bar-song-button").innerHTML = tg.song.data.name || "(Untitled)";
     
     tg.setupSongListeners(source);
+    tg.setSongControlsUI()
 };
 
 tg.setupSongListeners = function (source) {
     
     tg.song.onKeyChangeListeners.push(function () {
-        tg.player.rescaleSection(tg.currentSection);
+        tg.musicContext.rescaleSection(tg.currentSection);
         tg.setSongControlsUI();
     });
     tg.song.onBeatChangeListeners.push(function () {
@@ -66,17 +69,7 @@ tg.setupSongListeners = function (source) {
 tg.setupSongListeners();
 
 tg.loadSection = function (section) {
-    var showMeters = tg.peakMeters.show;
-    tg.peakMeters.toggle("Off");
-
-    tg.currentSection = section;
-    tg.partList.innerHTML = "";
-    for (var j = 0; j < section.parts.length; j++) {
-        tg.loadPart(section.parts[j]);        
-    }
-    //if (tg.player.loopSection)
-    tg.setSongControlsUI();
-    tg.peakMeters.toggle(showMeters);
+    tg.setSongControlsUI();    
 };
 
 tg.loadPart = function (part) {
@@ -90,28 +83,26 @@ tg.loadPart = function (part) {
             tg.instrument.onchange(part, frets);
         };*/
     }
-    part.midiChannel = tg.currentSection.parts.indexOf(part) + 1;
+    //part.midiChannel = tg.currentSection.parts.indexOf(part) + 1;
     
     if (tg.peakMeters.show === "All" || tg.peakMeters.show === "Parts") {
         if (part.postFXGain) {
-            tg.peakMeters.visibleMeters.push(new PeakMeter(part.postFXGain, part.muteButton, tg.player.context));
+            tg.peakMeters.visibleMeters.push(new PeakMeter(part.postFXGain, part.muteButton, tg.musicContext.audioContext));
         }
         else {
             part.onnodesready = () => {
-                tg.peakMeters.visibleMeters.push(new PeakMeter(part.postFXGain, part.muteButton, tg.player.context));
+                tg.peakMeters.visibleMeters.push(new PeakMeter(part.postFXGain, part.muteButton, tg.musicContext.audioContext));
             }
         }
     }
     return div;
 };
 
-tg.player = new OMusicPlayer();
 tg.player.loadFullSoundSets = true;
 tg.player.allowMic = true
 if (tg.remoteTo) {
     tg.player.disableAudio = true;
 }
-tg.player.prepareSong(tg.song);
 
 
 tg.player.onPlay = function () {
@@ -135,7 +126,7 @@ tg.player.onBeatPlayedListeners.push(function (isubbeat, section) {
     }
     if (isubbeat === 0) {
         if (tg.currentSection !== section) {
-            tg.loadSection(section);
+            tg.currentSection = section
         }
         tg.setSongControlsUI();
     }
@@ -155,18 +146,22 @@ omg.server.getHTTP("/user/", function (res) {
 });
 
 tg.onLoginLive = function () {
-    if (tg.joinLiveRoom) tg.omglive.join(tg.joinLiveRoom, () => {
-        tg.liveButton.style.display = "block"
-        if (window.innerWidth > window.innerHeight && !tg.singlePanel) {
-            tg.liveButton.onclick()
-        }
-    })
-    if (tg.goLive) tg.omglive.goLive(() => {
-        tg.liveButton.style.display = "block"
-        if (window.innerWidth > window.innerHeight && !tg.singlePanel) {
-            tg.liveButton.onclick()
-        }
-    })    
+    if (tg.joinLiveRoom || tg.remoteTo) {
+        tg.omglive.join(tg.joinLiveRoom || tg.remoteTo, () => {
+            tg.liveButton.style.display = "block"
+            if (window.innerWidth > window.innerHeight && !tg.singlePanel) {
+                tg.liveButton.onclick()
+            }
+        })
+    }
+    if (tg.goLive) {
+        tg.omglive.goLive(() => {
+            tg.liveButton.style.display = "block"
+            if (window.innerWidth > window.innerHeight && !tg.singlePanel) {
+                tg.liveButton.onclick()
+            }
+        })
+    }
 }
 
 
@@ -322,35 +317,11 @@ tg.backButton.onclick = function () {
 
 tg.sequencer = {
     div: document.getElementById("sequencer-fragment"),
-    fullStrengthButton: document.getElementById("sequencer-beat-strength-loud"),
-    mediumStrengthButton: document.getElementById("sequencer-beat-strength-medium"),
-    softStrengthButton: document.getElementById("sequencer-beat-strength-soft"),
     surface: document.getElementById("sequencer-surface")
 };
 
 tg.sequencer.setup = function () {
     var s = tg.sequencer;
-    s.currentStrength = s.fullStrengthButton;
-    s.currentStrength.classList.add("sequencer-toolbar-beat-strength-selected");
-    
-    s.fullStrengthButton.onclick = function (e) {
-        s.currentStrength.classList.remove("sequencer-toolbar-beat-strength-selected");
-        e.target.classList.add("sequencer-toolbar-beat-strength-selected");
-        s.currentStrength = e.target;
-        s.part.drumMachine.beatStrength = 1;
-    };
-    s.mediumStrengthButton.onclick = function (e) {
-        s.currentStrength.classList.remove("sequencer-toolbar-beat-strength-selected");
-        e.target.classList.add("sequencer-toolbar-beat-strength-selected");
-        s.currentStrength = e.target;
-        s.part.drumMachine.beatStrength = 0.50;
-    };
-    s.softStrengthButton.onclick = function (e) {
-        s.currentStrength.classList.remove("sequencer-toolbar-beat-strength-selected");
-        e.target.classList.add("sequencer-toolbar-beat-strength-selected");
-        s.currentStrength = e.target;
-        s.part.drumMachine.beatStrength = 0.25;
-    };
     
     s.onBeatPlayedListener = function (isubbeat, section) {
         if (section !== tg.sequencer.part.section) {
@@ -368,10 +339,16 @@ tg.sequencer.setup = function () {
 tg.sequencer.uis = {}
 
 tg.sequencer.show = function (part) {
+    tg.hideDetails();
+    
     var s = tg.sequencer;
     
     if (!s.isSetup) {
         s.setup();
+    }
+
+    if (!part.headPart && tg.currentSection.parts[part.data.name]) {
+        part = tg.currentSection.parts[part.data.name]
     }
     
     s.beatStrength = 1;
@@ -405,7 +382,6 @@ tg.sequencer.show = function (part) {
     
     tg.player.onBeatPlayedListeners.push(s.onBeatPlayedListener);
     
-    tg.hideDetails();
     s.div.style.display = "flex";
     part.drumMachine.draw();
     tg.currentFragment = tg.sequencer;
@@ -489,6 +465,10 @@ tg.instrument.show = function (part) {
 
     tg.player.onBeatPlayedListeners.push(tg.instrument.onBeatPlayedListener);
 
+    if (!part.headPart && tg.currentSection.parts[part.data.name]) {
+        part = tg.currentSection.parts[part.data.name]
+    }
+
     tg.currentFragment = tg.instrument;
     if (!part.data.notes) {
         part.data.notes = []
@@ -532,7 +512,6 @@ tg.playButtonCaption.onclick = function () {
         tg.player.stop();
     }
     else {
-        tg.player.loopSection = tg.song.sections.indexOf(tg.currentSection);
         tg.player.play();
     }
 };
@@ -819,7 +798,7 @@ tg.keyFragment.setup = function () {
 };
 
 tg.keyChanged = function () {
-    tg.currentSection.parts.forEach(function (part) {
+    Object.values(tg.currentSection.parts).forEach(function (part) {
         if (part.mm) {
             part.mm.setupFretBoard();
         }
@@ -1112,12 +1091,8 @@ tg.addCustomSoundSet = function () {
 
 tg.addPart = function (soundSet, source) {
     var blankPart = {soundSet: soundSet};
-    var names = tg.currentSection.parts.map(section => section.data.name);
-    blankPart.name = omg.util.getUniqueName(soundSet.name, names);
     
-    var part = tg.currentSection.addPart(blankPart, source)
-
-    tg.player.loadPart(part)
+    var part = tg.song.addPart(blankPart, source)
 
     //todo shouldn't this be part of the listener?
     if (tg.presentationMode) tg.presentationFragment.addPart(part);
@@ -1162,7 +1137,7 @@ tg.mixFragment = {
 tg.mixFragment.onshow = function () {
     var divs = [];
     tg.mixFragment.div.innerHTML = "";
-    tg.currentSection.parts.forEach(function (part) {
+    Object.values(tg.song.parts).forEach(function (part) {
         tg.makeMixerDiv(part, divs, tg.mixFragment.div);
     });
 
@@ -1858,7 +1833,7 @@ SliderCanvas.prototype.onnewX = function (x, y) {
 SliderCanvas.prototype.onupdate = function (value) {
     if (this.audioNode) {
         if (this.isAudioParam) {
-            this.audioNode[this.controlInfo.property].setValueAtTime(value, tg.player.context.currentTime);
+            this.audioNode[this.controlInfo.property].setValueAtTime(value, tg.player.audioContext.currentTime);
         }
         else {
             this.audioNode[this.controlInfo.property] = value;
@@ -2057,11 +2032,11 @@ tg.userFragment.tabs.settings.setup = function () {
             dataObject: tg.peakMeters,
             onchange: (value) => tg.peakMeters.toggle(value)
         },
-        {property: "presentationMode", default: false, 
+        /*{property: "presentationMode", default: false, 
             name: "Presentation Mode", type: "options", options: [false, true], onchange: (value) => {
                 if (value) tg.turnOnPresentationMode();
             }
-        },
+        },*/
         {property: "fullscreen", default: false, 
             name: "Fullscreen", type: "options", options: [false, true], onchange: (value) => {
                 if (value) document.body.requestFullscreen();
@@ -2206,8 +2181,8 @@ tg.songFragment.setup = function () {
     };
     omg.ui.setupInputEvents(this.btcInput, tg.song.data, "btc_address")
     
-    document.getElementById("create-new-song-button").onclick = function () {
-        tg.loadSong(tg.newBlankSong());
+    document.getElementById("create-new-song-button").onclick = async function () {
+        await tg.loadSong(tg.newBlankSong());
         tg.addPartButton.onclick();
     };
 
@@ -2377,7 +2352,7 @@ tg.sectionFragment.addSectionListItem = (section) => {
 
     sectionDiv.onclick = function () {
         tg.loadSection(section);
-        tg.player.loopSection = tg.song.sections.indexOf(section);
+        tg.player.loopSection = section;
         tg.sectionFragment.updateSelectedSection(sectionDiv, section);
         tg.setSongControlsUI();
     };
@@ -2524,7 +2499,7 @@ tg.sectionFragment.onBeatPlayedListener = function (subbeat, section) {
         div = tg.sectionFragment.arrangementDiv.children[tg.player.arrangementI];
     }
     else {
-        div = tg.sectionFragment.listDiv.children[tg.song.sections.indexOf(section)];
+        div = tg.sectionFragment.listDiv.children[Object.values(tg.song.sections).indexOf(section)];
     }
     
     if (div) {
@@ -2539,12 +2514,12 @@ tg.showSectionFragment = function () {
     tg.sectionFragment.lastSelectedSection = tg.currentSection;
     tg.sectionFragment.presetNameMenuDiv.style.display = "none";
     tg.sectionFragment.listDiv.innerHTML = "";
-    tg.song.sections.forEach(section => {
+    Object.values(tg.song.sections).forEach(section => {
         tg.sectionFragment.addSectionListItem(section);
     });
     tg.sectionFragment.arrangementDiv.innerHTML = "";
     tg.song.arrangement.forEach(section => {
-        tg.sectionFragment.addArrangementListItem(section);
+        //tg.sectionFragment.addArrangementListItem(section);
     });
     tg.sectionFragment.updateArrangementElements();
     tg.sectionFragment.div.style.display = "block";
@@ -2586,13 +2561,8 @@ tg.sectionFragment.updateArrangementElements = function () {
 };
 
 tg.copySection = function (name) {
-    var newSectionData = tg.currentSection.getData();
-    if (name) newSectionData.name = name;
-    var names = tg.song.sections.map(section => section.data.name);
-    newSectionData.name = omg.util.getUniqueName(newSectionData.name, names);
-    var newSection = new OMGSection(newSectionData, tg.song);
-    tg.player.loadSection(newSection);
-    tg.player.loopSection = tg.song.sections.indexOf(newSection);
+    var newSection = tg.song.addSection(this.currentSection.data)
+    tg.player.loopSection = newSection;
     tg.loadSection(newSection);
     return newSection;
 };
@@ -2846,7 +2816,7 @@ tg.micFragment.finalizeRecording = function () {
     var reader = new FileReader();
     reader.readAsArrayBuffer(blob);
     reader.onloadend = function() {
-        tg.player.context.decodeAudioData(reader.result, function (buffer) {
+        tg.player.auidioContext.decodeAudioData(reader.result, function (buffer) {
             tg.player.loadedSounds[key] = buffer;
         })
     }
@@ -2997,9 +2967,11 @@ tg.presentationFragment.onshow = function () {
     f.partList.innerHTML = "";
     f.beatMarker.style.display = "block";
     var divs = [];
-    tg.currentSection.parts.forEach(function (part) {
+    // todo , this broke when I swtiched to the OMusicContext, disbaled in settings
+    Object.values(tg.song.parts).forEach(function (part) {
         var div = document.createElement("div");
         div.className = "presentation-mode-canvas-holder";
+        part = tg.currentSection.parts[part.data.name]
         
         if (part.data.surface.url === "PRESET_SEQUENCER") {
             part.presentationUI = new OMGDrumMachine(div, part, {noBackground: true, readOnly: false, captionWidth:0});
@@ -3288,15 +3260,15 @@ tg.peakMeters.toggle = function (value) {
     this.visibleMeters = [];
     
     if (value === "All" || value === "Master") {
-        var meter = new PeakMeter(tg.song.postFXGain, tg.playButtonMeter, tg.player.context);
+        var meter = new PeakMeter(tg.song.postFXGain, tg.playButtonMeter, tg.musicContext.audioContext);
         this.visibleMeters.push(meter);
     }
 
     if (value === "All" || value === "Parts") {
         var part;
-        for (var i = 0; i < tg.currentSection.parts.length; i++) {
-            part = tg.currentSection.parts[i];
-            var meter = new PeakMeter(part.postFXGain, part.muteButton, tg.player.context);
+        for (var partName in tg.song.parts) {
+            part = tg.song.parts[partName];
+            var meter = new PeakMeter(part.postFXGain, part.muteButton, tg.musicContext.audioContext);
             this.visibleMeters.push(meter);
         }
     }
