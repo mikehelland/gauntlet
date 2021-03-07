@@ -134,6 +134,7 @@ tg.player.allowMic = true
 if (tg.remoteTo) {
     tg.player.disableAudio = true;
 }
+tg.musicContext.getFXFactory()
 
     
 omg.server.getHTTP("/user/", function (res) {
@@ -1644,7 +1645,7 @@ tg.availableFX = ["Delay", "Chorus", "Phaser", "Overdrive", "Compressor",
 tg.setupAddFXButtons = function (part, addButton, availableFXDiv, fxList) {
     availableFXDiv.style.display = "none";
     availableFXDiv.innerHTML = "";
-    for (let fx in tg.player.fx) {
+    for (let fx in tg.musicContext.fxFactory.fx) {
         var fxDiv = document.createElement("div");
         fxDiv.className = "fx-button"
         fxDiv.innerHTML = fx;
@@ -1669,7 +1670,7 @@ tg.setupAddFXButtons = function (part, addButton, availableFXDiv, fxList) {
 };
 
 tg.addFXToPart = function (fxName, part, fxList) {
-    var fxNode = tg.player.addFXToPart(fxName, part);
+    var fxNode = tg.musicContext.addFXToPart(fxName, part);
     tg.setupFXDiv(fxNode, part, fxList);
 };
 
@@ -1704,7 +1705,7 @@ tg.setupFXDiv = function (fx, part, fxListDiv) {
     removeButton.innerHTML = "Remove FX";
     removeButton.onclick = function () {
         fxListDiv.removeChild(holder);
-        tg.player.removeFXFromPart(fx, part);
+        tg.musicContext.removeFXFromPart(fx, part);
     };
     tools.appendChild(bypassButton);
     tools.appendChild(removeButton);
@@ -1716,7 +1717,7 @@ tg.setupFXDiv = function (fx, part, fxListDiv) {
 
 tg.setupFXControls = function (fx, part, fxDiv) {
 
-    var controls = tg.player.fx[fx.data.name].controls;
+    var controls = tg.musicContext.fxFactory.fx[fx.data.name].controls;
     var divs = [];
     controls.forEach(function (control) {        
         var canvas = document.createElement("canvas");
