@@ -38,7 +38,38 @@ tg.loadSong = async function (songData, source, callback) {
     tg.setSongControlsUI()
 };
 
+tg.onPlayListener = (playing) => {
+    if (playing) {
+        tg.drawPlayButton(0);
+        tg.playButtonCaption.innerHTML = "STOP";    
+    }
+    else {
+        tg.drawPlayButton();
+        tg.playButtonCaption.innerHTML = "PLAY";
+        var chordsCaption = tg.makeChordsCaption();
+        tg.chordsButton.innerHTML = chordsCaption;
+        tg.chordsEditorView.innerHTML = chordsCaption;    
+    }
+}
+
 tg.setupSongListeners = function (source) {
+    
+    tg.player.onPlayListeners.push(tg.onPlayListener)
+
+    tg.player.onBeatPlayedListeners.push(function (isubbeat, section) {
+        if (tg.presentationMode) {
+            tg.presentationFragment.updateBeatMarker(isubbeat);
+        }
+        else {
+            tg.drawPlayButton(isubbeat);
+        }
+        if (isubbeat === 0) {
+            if (tg.currentSection !== section) {
+                tg.currentSection = section
+            }
+            tg.setSongControlsUI();
+        }
+    });
     
     tg.song.onKeyChangeListeners.push(function () {
         tg.musicContext.rescaleSection(tg.currentSection);
@@ -104,33 +135,6 @@ if (tg.remoteTo) {
     tg.player.disableAudio = true;
 }
 
-
-tg.player.onPlay = function () {
-    tg.drawPlayButton(0);
-    tg.playButtonCaption.innerHTML = "STOP";
-};
-tg.player.onStop = function () {
-    tg.drawPlayButton();
-    tg.playButtonCaption.innerHTML = "PLAY";
-    var chordsCaption = tg.makeChordsCaption();
-    tg.chordsButton.innerHTML = chordsCaption;
-    tg.chordsEditorView.innerHTML = chordsCaption;
-};
-
-tg.player.onBeatPlayedListeners.push(function (isubbeat, section) {
-    if (tg.presentationMode) {
-        tg.presentationFragment.updateBeatMarker(isubbeat);
-    }
-    else {
-        tg.drawPlayButton(isubbeat);
-    }
-    if (isubbeat === 0) {
-        if (tg.currentSection !== section) {
-            tg.currentSection = section
-        }
-        tg.setSongControlsUI();
-    }
-});
     
 omg.server.getHTTP("/user/", function (res) {
     if (res) {
@@ -325,7 +329,7 @@ tg.sequencer.setup = function () {
     
     s.onBeatPlayedListener = function (isubbeat, section) {
         if (section !== tg.sequencer.part.section) {
-            var newPart = section.getPart(tg.sequencer.part.data.name);
+            var newPart = tg.song.parts[tg.sequencer.part.data.name];
             if (newPart) {
                 newPart.mainFragmentButtonOnClick();
             }
@@ -447,7 +451,7 @@ tg.instrument.setup = function () {
     
     tg.instrument.onBeatPlayedListener = function (subbeat, section) {
         if (section !== tg.instrument.part.section) {
-            var newPart = section.getPart(tg.instrument.part.data.name);
+            var newPart = tg.song.parts[tg.instrument.part.data.name];
             if (newPart) {
                 newPart.mainFragmentButtonOnClick();
             }
