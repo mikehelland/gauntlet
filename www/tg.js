@@ -1094,10 +1094,12 @@ tg.addCustomSoundSet = function () {
     tg.addPart(soundSet, "addPartFragment");
 };
 
-tg.addPart = function (soundSet, source) {
-    var blankPart = {soundSet: soundSet};
+tg.addPart = function (partData, source) {
+    if (!partData.soundSet) {
+        partData = {soundSet: partData};
+    }
     
-    var part = tg.song.addPart(blankPart, source)
+    var part = tg.song.addPart(partData, source)
 
     //todo shouldn't this be part of the listener?
     if (tg.presentationMode) tg.presentationFragment.addPart(part);

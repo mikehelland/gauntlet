@@ -272,6 +272,7 @@ tg.omglive.emit = (type, data) => {
 }
 
 tg.omglive.setupListeners = function () {
+    console.log("setuplisteners", tg.song)
     tg.player.onPlayListeners.push(tg.omglive.onPlayListener);
     tg.song.onBeatChangeListeners.push(tg.omglive.onBeatChangeListener);
     tg.song.onKeyChangeListeners.push(tg.omglive.onKeyChangeListener);
@@ -415,10 +416,10 @@ tg.omglive.onPlayListener = function (play) {
     tg.omglive.emit("SONG", data);
 };
 
-tg.omglive.onjoin = function (data) {
+tg.omglive.onjoin = async function (data) {
     tg.omglive.onchat({text: Object.keys(data.users).length + " users here"})
     if (data.thing && (tg.remoteTo || tg.joinLiveRoom)) {
-        tg.loadSong(data.thing, "omglive", tg.omglive.joinCallback);
+        await tg.loadSong(data.thing, "omglive", tg.omglive.joinCallback);
         tg.omglive.joinCallback = undefined
     }
     if (data.offer) {
@@ -451,7 +452,7 @@ tg.omglive.ondata = function (data) {
         tg.song.chordProgressionChanged("omglive");
     }
     else if (data.property === "audioParams" && data.partName) {
-        let part = tg.currentSection.getPart(data.partName);
+        let part = tg.song.parts[data.partName];
         if (!part) return;
         part.data.audioParams.mute = data.value.mute;
         part.data.audioParams.gain = data.value.gain;
@@ -460,7 +461,7 @@ tg.omglive.ondata = function (data) {
         tg.song.partMuteChanged(part, "omglive");
     }
     else if (data.action === "partAdd") {
-        tg.addPart(data.part.soundSet, "omglive");
+        tg.addPart(data.part, "omglive");
     }
     else if (data.action === "sequencerChange") {
         let part = tg.currentSection.parts[data.partName];
@@ -515,20 +516,20 @@ tg.omglive.onVerticalChangeFrets = function (data) {
 };
 
 tg.omglive.onFXChange = function (data) {
-    let part = data.partName ? tg.currentSection.getPart(data.partName) : tg.song;
+    let part = data.partName ? tg.song.parts[data.partName] : tg.song;
     if (!part) return;
 
     if (data.fxAction === "add") {
-        tg.player.addFXToPart(data.fxName, part, "omglive");
+        tg.musicContext.addFXToPart(data.fxName, part, "omglive");
     }
     else if (data.fxAction === "remove") {
         var fx = part.getFX(data.fxName)
-        tg.player.removeFXFromPart(fx, part, "omglive");
+        tg.musicContext.removeFXFromPart(fx, part, "omglive");
     }
     else if (data.fxAction) {
         var fx = part.getFX(data.fxName)
         for (var property in data.fxAction) {
-            tg.player.adjustFX(fx, part, property, data.fxAction[property], "omglive");
+            tg.musicContext.adjustFX(fx, part, property, data.fxAction[property], "omglive");
         }
     }
 }
