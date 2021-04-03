@@ -2,6 +2,6 @@
 	"name": "music",
     "activities": [
 		{"name": "Music", "url": ".", "edits": ["SONG","PART"], "uses": ["SOUNDSET"]},
-		{"name": "Music Socket Message Handler", "url": "server.js", "socketHandler": ["SONG"]}
+		{"name": "Music Socket Message Handler", "url": "sockets.js", "socketHandler": ["SONG"]}
 	]
 }
