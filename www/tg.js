@@ -3402,10 +3402,11 @@ tg.startRecording = function () {
 
 
 //keep this last
+var OMGDrumMachine, OMGMelodyMaker
+import("/apps/music/js/sequencer_surface.js").then(o => OMGDrumMachine = o.default)
+import("/apps/music/js/vertical_surface.js").then(o => OMGMelodyMaker = o.default)
 
-
-var moreScripts = [{url: "/apps/music/js/sequencer_surface.js"},
-    {url: "/apps/music/js/vertical_surface.js"},
+var moreScripts = [
     {url: "/apps/music/js/monkey.js"},
     {url: "live.js", onload: () => {
         if (tg.onLiveScriptLoaded) {
