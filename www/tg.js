@@ -411,44 +411,10 @@ tg.sequencer.onchange = function () {
 
 tg.instrument = {
     div: document.getElementById("instrument-fragment"),
-    editButton: document.getElementById("instrument-edit-button"),
-    zoomButton: document.getElementById("instrument-zoom-button"),
     surface: document.getElementById("instrument-surface")
 };
 
-tg.instrument.setMode = function (mode) {
-    if (mode === "EDIT") {
-        this.editButton.classList.add("selected-option");
-    }
-    else {
-        this.editButton.classList.remove("selected-option");
-    }
-    if (mode === "ZOOM") {
-        this.zoomButton.classList.add("selected-option");
-    }
-    else {
-        this.zoomButton.classList.remove("selected-option");
-    }
-    
-    this.mm.mode = mode;
-    this.mm.draw();
-};
-
 tg.instrument.setup = function () {
-    var ti = tg.instrument;
-    ti.editButton.onclick = function (e) {
-        if (ti.mm.mode === "EDIT") {
-            e.target.classList.add("selected-option");
-            ti.currentMode = e.target;
-        }
-    };
-    
-    this.editButton.onclick = function () {
-        ti.setMode(ti.mm.mode !== "EDIT" ? "EDIT" : "LIVE");
-    };
-    this.zoomButton.onclick = function () {
-        ti.setMode(ti.mm.mode !== "ZOOM" ? "ZOOM" : "LIVE");
-    };
     
     tg.instrument.onBeatPlayedListener = function (subbeat, section) {
         if (section !== tg.instrument.part.section) {
@@ -492,7 +458,7 @@ tg.instrument.show = function (part) {
     //todo was this here for a reason? causes a problem now
     //tg.instrument.mm.setCanvasEvents();
     tg.instrument.mm.backgroundDrawn = false;
-    tg.instrument.setMode("WRITE");
+    tg.instrument.mm.draw()
 };
 
 tg.instrument.onhide = function () {
