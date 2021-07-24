@@ -214,7 +214,6 @@ tg.getSong(async function (song) {
 
     var scriptTag;
     let scripts = ["/js/omgservice.js",
-        "/apps/music/js/omgservice_music.js",
         "tg.js",
     ]
     
