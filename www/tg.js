@@ -718,8 +718,8 @@ tg.keyFragment = {
         if (this.lastScale) {
             this.lastScale.classList.remove("selected-list-item");
         }
-        for (var i = 0; i < omg.ui.scales.length; i++) {
-            if (omg.ui.scales[i].value.join() === tg.song.data.keyParams.scale.join()) {
+        for (var i = 0; i < tg.scales.length; i++) {
+            if (tg.scales[i].value.join() === tg.song.data.keyParams.scale.join()) {
                 let scaleDiv = this.scaleList.childNodes[i]
                 scaleDiv.classList.add("selected-list-item");
                 this.lastScale = scaleDiv;
@@ -737,7 +737,8 @@ tg.keyFragment = {
 
 tg.keyFragment.setup = function () {
     var kf = tg.keyFragment;
-    
+    tg.scales = tg.musicContext.scales
+    tg.keys = tg.musicContext.keys
     kf.listener = function (keyParams, source) {
         if (source === "keyFragment") return;
         if (kf.lastKey) {
@@ -746,8 +747,8 @@ tg.keyFragment.setup = function () {
         kf.lastKey = kf.keyList.children[keyParams.rootNote];
         kf.lastKey.classList.add("selected-list-item");
         
-        for (var i = 0; i < omg.ui.scales.length; i++) {
-            if (omg.ui.scales[i].value.join() === keyParams.scale.join()) {
+        for (var i = 0; i < tg.scales.length; i++) {
+            if (tg.scales[i].value.join() === keyParams.scale.join()) {
                 if (kf.lastScale) {
                     kf.lastScale.classList.remove("selected-list-item");
                 }
@@ -761,7 +762,7 @@ tg.keyFragment.setup = function () {
     kf.keyList.innerHTML = "";
     kf.scaleList.innerHTML = "";
     var keyI = 0;
-    omg.ui.keys.forEach(function (key) {
+    tg.keys.forEach(function (key) {
         var keyDiv = document.createElement("div");
         keyDiv.className = "key-select-button";
         keyDiv.innerHTML = "<p>" + key + "</p>";;
@@ -781,7 +782,7 @@ tg.keyFragment.setup = function () {
         kf.keyList.appendChild(keyDiv);
         keyI++;
     });
-    omg.ui.scales.forEach(function (scale) {
+    tg.scales.forEach(function (scale) {
         var scaleDiv = document.createElement("div");
         scaleDiv.className = "scale-select-button";
         scaleDiv.innerHTML = "<p>" + scale.name + "</p>";
