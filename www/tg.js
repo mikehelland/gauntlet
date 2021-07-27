@@ -19,7 +19,7 @@ tg.loadSong = async function (songData, source, callback) {
     var {song, player} = await tg.musicContext.load(songData)
     tg.song = song
     tg.player = player
-    var section = Object.values(tg.song.sections)[0] || tg.song.addSection() 
+    var section = Object.values(tg.song.sections)[0] || tg.song.addSection().section 
 
     var showMeters = tg.peakMeters.show;
     tg.peakMeters.toggle("Off");
@@ -2535,7 +2535,7 @@ tg.sectionFragment.updateArrangementElements = function () {
 };
 
 tg.copySection = function (name) {
-    var newSection = tg.song.addSection(this.currentSection.data)
+    var newSection = tg.song.addSection(this.currentSection.data).section
     tg.player.loopSection = newSection;
     tg.loadSection(newSection);
     return newSection;
