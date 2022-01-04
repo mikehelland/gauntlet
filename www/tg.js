@@ -1519,25 +1519,36 @@ tg.partOptionsFragment.tabs.options.setup = function () {
     
     
     f.clearButton.onclick = function () {
-        if (ff.part.data.notes) {
-            ff.part.data.notes = [];
+        var part
+        for (var p in tg.currentSection.parts) {
+            if (tg.currentSection.parts[p].headPart === ff.part) {
+                part = tg.currentSection.parts[p]
+            }
         }
-        if (ff.part.data.tracks) {
-            for (var i = 0; i < ff.part.data.tracks.length; i++) {
-                for (var j = 0; j < ff.part.data.tracks[i].data.length; j++) {
-                    ff.part.data.tracks[i].data[j] = false;
+        
+        if (!part) return 
+        
+        if (part.data.notes) {
+            part.data.notes = [];
+        }
+        if (part.data.tracks) {
+            for (i = 0; i < part.data.tracks.length; i++) {
+                for (var j = 0; j < part.data.tracks[i].data.length; j++) {
+                    part.data.tracks[i].data[j] = false;
                 }
             }
         }
         ff.part.mainFragmentButtonOnClick()
     };
     f.removeButton.onclick = function () {
-        var i = tg.currentSection.parts.indexOf(ff.part);
+        var i = tg.song.data.parts.indexOf(ff.part.data);
         if (i > -1) {
-            tg.currentSection.parts.splice(i, 1)
-            tg.currentSection.data.parts.splice(i, 1)
+            //tg.currentSection.parts.splice(i, 1)
+            //tg.currentSection.data.parts.splice(i, 1)
             tg.partList.removeChild(tg.partList.children[i])
         }
+        console.log(ff.part)
+        tg.song.removePart(ff.part)
         tg.hideDetails();
     }
     
@@ -1549,6 +1560,7 @@ tg.partOptionsFragment.tabs.options.setup = function () {
 
 tg.partOptionsFragment.onshow = function (part) {
     this.part = part
+    console.log(part)
 }
 
 tg.partOptionsFragment.tabs.options.onshow = function () {
